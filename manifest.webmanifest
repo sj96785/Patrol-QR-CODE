@@ -3,8 +3,8 @@
   "short_name": "巡邏QR",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#111111",
+  "theme_color": "#111111",
   "icons": [
     {
       "src": "icon-192.png",
