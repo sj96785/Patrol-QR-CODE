@@ -1,41 +1,45 @@
-/* 巡邏最近點QR PWA Service Worker */
-const CACHE_NAME = "patrol-qr-v3";
-const CORE_ASSETS = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest",
-  "./icon-192.png",
-  "./icon-512.png"
+/* Offline cache for 最近巡邏點 QR */
+const CACHE = 'patrol-qr-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-self.addEventListener("install", (event) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
+    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => (k !== CACHE_NAME) ? caches.delete(k) : null))
-    )
+    caches.keys().then((keys) => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      caches.match('./index.html').then((cached) => cached || fetch(event.request))
+    );
+    return;
+  }
 
   event.respondWith(
-    caches.match(req).then(cached => {
-      if (cached) return cached;
-      return fetch(req).then(resp => {
+    caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+      const fetchPromise = fetch(event.request).then((resp) => {
         const copy = resp.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+        caches.open(CACHE).then((cache) => cache.put(event.request, copy));
         return resp;
       }).catch(() => cached);
+
+      return cached || fetchPromise;
     })
   );
 });
